@@ -9,8 +9,6 @@ const App = () => {
   const [pdfFileKey, setPdfFileKey] = useState(0); // Добавлено состояние для ключа input type="file"
   const [dataToRender, setDataToRender] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { darkMode} = useTheme();
-  const { toggleDarkMode } = useTheme();
   const [messageApi, contextHolder] = message.useMessage();
 
   pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
