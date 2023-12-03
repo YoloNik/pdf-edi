@@ -5,7 +5,7 @@ import { parse } from 'date-fns';
 import moment from 'moment';
 
 const App = () => {
-  const [pdfFileKey, setPdfFileKey] = useState(0); // Добавлено состояние для ключа input type="file"
+  const [pdfFileKey, setPdfFileKey] = useState(0);
   const [dataToRender, setDataToRender] = useState([]);
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
