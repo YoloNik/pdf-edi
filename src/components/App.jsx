@@ -137,8 +137,8 @@ const App = () => {
         title: moment(date, 'DD/MM/YYYY').format('DD/MM/YYYY'),
         dataIndex: `quantities_${date}`,
         key: date,
-        render: (text) => (isNaN(text) ? text : parseFloat(text).toFixed(0)),
-        className: moment(date, 'DD/MM/YYYY').isoWeekday() > 5 ? 'weekend-column' : '', // Добавляем класс для выходных
+        render: (text) => (isNaN(text) ? text : parseFloat(text)),
+        className: moment(date, 'DD/MM/YYYY').isoWeekday() > 5 ? 'weekend-column' : '',
       })),
     ];
   };
@@ -160,6 +160,7 @@ const App = () => {
     });
   };
 
+
   const columns = generateColumns();
   const dataSource = generateDataSource();
 
@@ -169,6 +170,8 @@ const App = () => {
       console.log('Данные обновлены:', dataToRender);
     }
   }, [dataToRender]);
+
+  
 
   return (
     <div>
@@ -212,6 +215,7 @@ const App = () => {
           ) : dataToRender.length > 0 ? (
             <>
               <Table 
+              // inputColumn
               dataSource={dataSource} 
               columns={columns} 
               pagination={{ pageSize: dataSource.length }} 
@@ -228,4 +232,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App; 
