@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, message, Spin } from 'antd';
 import { pdfjs } from 'react-pdf';
-import { parse } from 'date-fns';
+import { parse, subDays, format, isWeekend, addDays } from 'date-fns';
 import moment from 'moment';
 
 const App = () => {
@@ -53,6 +53,7 @@ const App = () => {
     let extractedData;
     let allText = '';
 
+
     try {
       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const maxPages = pdf.numPages;
@@ -65,6 +66,10 @@ const App = () => {
       }
 
       const clientData = cleanText(allText);
+      const enhancedData = clientData.map(item => ({ ...item, transitTime: item.transitTime || 0 }));
+
+  setDataToRender(enhancedData);
+      console.log(enhancedData)
 
       extractedData = clientData;
       setDataToRender(extractedData);
@@ -73,6 +78,31 @@ const App = () => {
     }
 
     return extractedData;
+  };
+
+
+  const calculateShippingDate = (deliveryDateStr, transitTime) => {
+    if (!deliveryDateStr || transitTime === '' || isNaN(transitTime) || parseInt(transitTime) < 0) {
+      return null;
+    }
+  
+    const deliveryDate = parse(deliveryDateStr, 'dd/MM/yyyy', new Date());
+  
+    if (isNaN(deliveryDate)) {
+      return null;
+    }
+  
+    let shippingDate = deliveryDate;
+    let daysToSubtract = parseInt(transitTime);
+  
+    while (daysToSubtract > 0) {
+      shippingDate = subDays(shippingDate, 1);
+      if (!isWeekend(shippingDate)) {
+        daysToSubtract--;
+      }
+    }
+  
+    return format(shippingDate, 'dd/MM/yyyy');
   };
 
   const cleanText = (text) => {
@@ -104,7 +134,7 @@ const App = () => {
         if (dataMatch) {
           const date = dataMatch[1];
           const nextLine = lines[i + 7];
-          const value = parseFloat(nextLine.trim()) || 0;
+          const value = parseFloat(nextLine.trim().replace(/\./g,"")) || 0;
           currentItem.quantities[date] = value;
         }
       }
@@ -124,14 +154,64 @@ const App = () => {
     return cleanedData;
   };
 
+  const handleInputChange = (id, transitTime) => {
+    setDataToRender((prevData) => {
+      const updatedData = prevData.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item };
+          updatedItem.transitTime = parseInt(transitTime, 10) || '';
+          const updatedQuantities = {};
+      
+          Object.keys(updatedItem.quantities).forEach((dateStr) => {
+            const newDateStr = calculateShippingDate(dateStr, updatedItem.transitTime);
+            if (newDateStr) {
+              updatedQuantities[newDateStr] = updatedItem.quantities[dateStr];
+            }
+          });
+      
+          updatedItem.quantities = updatedQuantities;
+          return updatedItem;
+        }
+        return item;
+      });
+  
+      return updatedData;
+    });
+  };
+
   const generateColumns = () => {
     if (dataToRender.length === 0) {
       return [];
     }
-
+  
     const dates = Object.keys(dataToRender[0].quantities);
+    
+    let earliestDate = dates.reduce((minDate, date) => {
+      const currentDate = parse(date, 'dd/MM/yyyy', new Date());
+      return currentDate < minDate ? currentDate : minDate;
+    }, new Date());
 
-    return [
+    for (let i = 1; i <= 7; i++) {
+      const newDate = format(subDays(earliestDate, i), 'dd/MM/yyyy');
+      dates.unshift(newDate);
+    }
+  
+    const columns = [
+
+      {
+        title: 'Transit Time',
+        dataIndex: 'transitTime', // изменено с 'transitTime'
+        key: 'transitTime',
+        render: (text, record) => (
+          <input
+            type="text"
+            defaultValue={record.transitTime} // Изменено с value на defaultValue
+            onChange={(e) => handleInputChange(record.key, e.target.value)}
+            style={{ width: '20px' }}
+          />
+        ),
+      },
+  
       { title: 'Part Number', dataIndex: 'PartNumber', key: 'PartNumber' },
       ...dates.map((date) => ({
         title: moment(date, 'DD/MM/YYYY').format('DD/MM/YYYY'),
@@ -141,6 +221,8 @@ const App = () => {
         className: moment(date, 'DD/MM/YYYY').isoWeekday() > 5 ? 'weekend-column' : '',
       })),
     ];
+  
+    return columns;
   };
 
   const generateDataSource = () => {
@@ -148,14 +230,15 @@ const App = () => {
       const rowData = {
         key: item.id,
         PartNumber: item.PartNumber,
+        transitTime: item.transitTime,
       };
-
+  
       const quantities = item.quantities;
-
+  
       Object.keys(quantities).forEach((date) => {
-        rowData[`quantities_${date}`] = parseFloat(quantities[date]);
+        rowData[`quantities_${date}`] = item.quantities[date] || 0;
       });
-
+  
       return rowData;
     });
   };
@@ -165,9 +248,9 @@ const App = () => {
   const dataSource = generateDataSource();
 
   useEffect(() => {
-    // Вызывается при изменении dataToRender
-    if (dataToRender.length > 0) {
-      console.log('Данные обновлены:', dataToRender);
+    // Вызываем функцию handleInputChange, чтобы обновить данные при изменении времени транзита
+    if (dataToRender.length >0) {
+
     }
   }, [dataToRender]);
 
