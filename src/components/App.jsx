@@ -3,6 +3,7 @@ import { Button, Table, message, Spin } from 'antd';
 import { pdfjs } from 'react-pdf';
 import { parse, subDays, format, isWeekend} from 'date-fns';
 import moment from 'moment';
+import { da } from 'date-fns/locale';
 
 const App = () => {
   const [pdfFileKey, setPdfFileKey] = useState(0);
@@ -179,45 +180,28 @@ const App = () => {
     });
   };
 
-  const generateColumns = () => {
-    if (dataToRender.length === 0) {
-      return [];
-    }
-  
-    const dates = Object.keys(dataToRender[0].quantities);
-    
-    let earliestDate = dates.reduce((minDate, date) => {
-      const currentDate = parse(date, 'dd/MM/yyyy', new Date());
-      return currentDate < minDate ? currentDate : minDate;
-    }, new Date());
-
-    for (let i = 1; i <= 7; i++) {
-      const newDate = format(subDays(earliestDate, i), 'dd/MM/yyyy');
-      dates.unshift(newDate);
-    }
-  
+  const generateColumnsForPart = (quantities) => {
+    const dates = Object.keys(quantities);
     const columns = [
-
       {
         title: 'Transit Time',
-        dataIndex: 'transitTime', // изменено с 'transitTime'
+        dataIndex: 'transitTime',
         key: 'transitTime',
         render: (text, record) => (
           <input
             type="text"
-            defaultValue={record.transitTime} // Изменено с value на defaultValue
+            defaultValue={record.transitTime}
             onChange={(e) => handleInputChange(record.key, e.target.value)}
-            style={{ width: '20px' }}
+            style={{ width: '60px' }}
           />
         ),
       },
-  
       { title: 'Part Number', dataIndex: 'PartNumber', key: 'PartNumber' },
       ...dates.map((date) => ({
         title: moment(date, 'DD/MM/YYYY').format('DD/MM/YYYY'),
-        dataIndex: `quantities_${date}`,
+        dataIndex: date, // Убран префикс quantities_
         key: date,
-        render: (text) => (isNaN(text) ? text : parseFloat(text)),
+        render: (text) => text || 0,
         className: moment(date, 'DD/MM/YYYY').isoWeekday() > 5 ? 'weekend-column' : '',
       })),
     ];
@@ -225,27 +209,21 @@ const App = () => {
     return columns;
   };
 
-  const generateDataSource = () => {
-    return dataToRender.map((item) => {
-      const rowData = {
-        key: item.id,
-        PartNumber: item.PartNumber,
-        transitTime: item.transitTime,
-      };
+  const generateDataSourceForPart = (partData) => {
+    // Создаем один объект данных для одной строки таблицы
+    const rowData = {
+      key: partData.id,
+      PartNumber: partData.PartNumber,
+      transitTime: partData.transitTime,
+      ...partData.quantities, // Используем quantities напрямую, без префикса
+    };
   
-      const quantities = item.quantities;
-  
-      Object.keys(quantities).forEach((date) => {
-        rowData[`quantities_${date}`] = item.quantities[date] || 0;
-      });
-  
-      return rowData;
-    });
+    return [rowData]; // Источник данных - это массив с одним объектом
   };
+  
 
-
-  const columns = generateColumns();
-  const dataSource = generateDataSource();
+    // const columns = generateColumnsForPart();
+  // const dataSource = generateDataSourceForPart();
 
   useEffect(() => {
     // Вызываем функцию handleInputChange, чтобы обновить данные при изменении времени транзита
@@ -254,64 +232,48 @@ const App = () => {
     }
   }, [dataToRender]);
 
-  
-
   return (
     <div>
       {contextHolder}
       <div className='info'>
-         <p style={{margin:0}}>Created with love by Mykyta Slipachuk</p>
+        <p style={{ margin: 0 }}>Created with love by Mykyta Slipachuk</p>
       </div>
       <div style={{ padding: '0 20px' }}>
         <h1 style={{ marginBottom: '20px' }}>PDF EDI Extractor</h1>
         <div key={pdfFileKey}>
           <div className='input-container'>
-           <label className="custom-file-upload">
+            <label className="custom-file-upload">
               Select a file
-             <input type="file" onChange={onFileChange} accept=".pdf" />
+              <input type="file" onChange={onFileChange} accept=".pdf" />
             </label>
-
             <Button type="primary" onClick={clearTable}>
-             Clear table
+              Clear table
             </Button>
           </div>
         </div>
       </div>
-
+  
       {pdfFileKey > 0 && (
         <div style={{ marginTop: '20px' }}>
           {loading ? (
-            <>
-              <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  background: 'rgba(0, 0, 0, 0.5)',
-                  zIndex: 1000,
-                }}
-              />
-              <Spin size="large" style={{ position: 'fixed', top: '50%', left: '50%', zIndex: 1001 }} />
-            </>
-          ) : dataToRender.length > 0 ? (
-            <>
-              <Table 
-              // inputColumn
-              dataSource={dataSource} 
-              columns={columns} 
-              pagination={{ pageSize: dataSource.length }} 
-              />
-            </>
+            <Spin size="large" style={{ position: 'fixed', top: '50%', left: '50%', zIndex: 1001 }} />
           ) : (
-            <p style={{ marginTop: '20px' }}>Data not found</p>
+            dataToRender.length > 0 ? (
+              dataToRender.map((partData, index) => (
+                <div key={`part-table-${index}`}>
+                  {/* <h2>{`Part Number: ${partData.PartNumber}`}</h2> */}
+                  <Table
+                    dataSource={generateDataSourceForPart(partData)}
+                    columns={generateColumnsForPart(partData.quantities)}
+                    pagination={false}
+                  />
+                </div>
+              ))
+            ) : <p style={{ marginTop: '20px' }}>Data not found</p>
           )}
         </div>
       )}
-      
     </div>
-    
   );
 };
 
