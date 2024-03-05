@@ -3,7 +3,6 @@ import { Button, Table, message, Spin } from 'antd';
 import { pdfjs } from 'react-pdf';
 import { parse, subDays, format, isWeekend} from 'date-fns';
 import moment from 'moment';
-import { da } from 'date-fns/locale';
 
 const App = () => {
   const [pdfFileKey, setPdfFileKey] = useState(0);
