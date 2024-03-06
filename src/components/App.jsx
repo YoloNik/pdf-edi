@@ -201,7 +201,7 @@ const App = () => {
         dataIndex: date, // Убран префикс quantities_
         key: date,
         render: (text) => text || 0,
-        className: moment(date, 'DD/MM/YY').isoWeekday() > 5 ? 'weekend-column' : '',
+        className: moment(date, 'DD/MM/YYYY').isoWeekday() > 5 ? 'weekend-column' : '',
       })),
     ];
   
