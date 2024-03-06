@@ -197,7 +197,7 @@ const App = () => {
       },
       { title: 'Part Number', dataIndex: 'PartNumber', key: 'PartNumber' },
       ...dates.map((date) => ({
-        title: moment(date, 'DD/MM/YY').format('DD/MM/YY'),
+        title: moment(date, 'DD/MM/YYYY').format('DD/MM/YYYY'),
         dataIndex: date, // Убран префикс quantities_
         key: date,
         render: (text) => text || 0,
